@@ -31,7 +31,7 @@ you need to install kubeflow and kubernets.
 * Execute the training process in kublefow
 * execute `streamlit run app.py`
 
-utils commands:
+utility commands:
 ```bash
 kubectl delete services eth-prediction
 kubectl delete deployment eth-prediction
