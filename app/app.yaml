@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eth-prediction
+  labels:
+    app: eth-prediction-app
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: eth-prediction-app
+  template:
+    metadata:
+      labels:
+        app: eth-prediction-app
+    spec:
+      containers:
+      - name: eth-prediction
+        image: drabasca/eth-prediction
+---
+apiVersion: v1
+# Indicates this as a service
+kind: Service
+metadata:
+  # Service name
+  name: eth-prediction
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    # Selector for Pods
+    app: eth-prediction-app
+  ports:
+  # Port Map
+  - port: 8501
+    targetPort: 8501
+    nodePort: 30080

@@ -1,0 +1,15 @@
+name: Download Data Function
+description: Download database yfinance
+
+outputs:
+  - {name: Download, type: LocalPath, description: 'Path where data will be stored.'}
+
+implementation:
+  container:
+    image: drabasca/download_data_v1
+    command: [
+      python, download_data.py,
+
+      --data,
+      {outputPath: Download},
+    ]

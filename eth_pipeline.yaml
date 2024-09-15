@@ -1,0 +1,284 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: eth-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.22, pipelines.kubeflow.org/pipeline_compilation_time: '2024-02-21T16:25:40.919933',
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "Applies Random Forest
+      Classifier and Linear Regression for ETH classification problem.", "name": "ETH
+      Pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.22}
+spec:
+  entrypoint: eth-pipeline
+  templates:
+  - name: download-data-function
+    container:
+      args: []
+      command: [python, download_data.py, --data, /tmp/outputs/Download/data]
+      image: drabasca/download_data_v1
+    outputs:
+      artifacts:
+      - {name: download-data-function-Download, path: /tmp/outputs/Download/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Download
+          database yfinance", "implementation": {"container": {"command": ["python",
+          "download_data.py", "--data", {"outputPath": "Download"}], "image": "drabasca/download_data_v1"}},
+          "name": "Download Data Function", "outputs": [{"description": "Path where
+          data will be stored.", "name": "Download", "type": "LocalPath"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "b72d6ed54715bd2cf5923ca1cb32b38ace88a0e727856c822ebde88833bd39f9", "url":
+          "download_data/download_data.yaml"}'}
+  - name: eth-pipeline
+    dag:
+      tasks:
+      - {name: download-data-function, template: download-data-function}
+      - name: linear-regression
+        template: linear-regression
+        dependencies: [preprocessing-data]
+        arguments:
+          artifacts:
+          - {name: preprocessing-data-Data, from: '{{tasks.preprocessing-data.outputs.artifacts.preprocessing-data-Data}}'}
+      - name: lstm
+        template: lstm
+        dependencies: [preprocessing-data-for-lstm]
+        arguments:
+          artifacts:
+          - {name: preprocessing-data-for-lstm-Data, from: '{{tasks.preprocessing-data-for-lstm.outputs.artifacts.preprocessing-data-for-lstm-Data}}'}
+      - name: preprocessing-data
+        template: preprocessing-data
+        dependencies: [download-data-function]
+        arguments:
+          artifacts:
+          - {name: download-data-function-Download, from: '{{tasks.download-data-function.outputs.artifacts.download-data-function-Download}}'}
+      - name: preprocessing-data-for-lstm
+        template: preprocessing-data-for-lstm
+        dependencies: [download-data-function]
+        arguments:
+          artifacts:
+          - {name: download-data-function-Download, from: '{{tasks.download-data-function.outputs.artifacts.download-data-function-Download}}'}
+      - name: random-forest-regressor
+        template: random-forest-regressor
+        dependencies: [preprocessing-data]
+        arguments:
+          artifacts:
+          - {name: preprocessing-data-Data, from: '{{tasks.preprocessing-data.outputs.artifacts.preprocessing-data-Data}}'}
+      - name: show-results
+        template: show-results
+        dependencies: [linear-regression, lstm, random-forest-regressor]
+        arguments:
+          parameters:
+          - {name: linear-regression-R2, value: '{{tasks.linear-regression.outputs.parameters.linear-regression-R2}}'}
+          - {name: lstm-R2, value: '{{tasks.lstm.outputs.parameters.lstm-R2}}'}
+          - {name: random-forest-regressor-R2, value: '{{tasks.random-forest-regressor.outputs.parameters.random-forest-regressor-R2}}'}
+  - name: linear-regression
+    container:
+      args: []
+      command: [python, linear_regression.py, --data, /tmp/inputs/Data/data, --r2,
+        /tmp/outputs/R2/data, --model, /tmp/outputs/model/data]
+      image: drabasca/linear_regression_v2
+    inputs:
+      artifacts:
+      - {name: preprocessing-data-Data, path: /tmp/inputs/Data/data}
+    outputs:
+      parameters:
+      - name: linear-regression-R2
+        valueFrom: {path: /tmp/outputs/R2/data}
+      artifacts:
+      - {name: linear-regression-R2, path: /tmp/outputs/R2/data}
+      - {name: linear-regression-model, path: /tmp/outputs/model/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Trains
+          a Linear Regression", "implementation": {"container": {"command": ["python",
+          "linear_regression.py", "--data", {"inputPath": "Data"}, "--r2", {"outputPath":
+          "R2"}, "--model", {"outputPath": "model"}], "image": "drabasca/linear_regression_v2"}},
+          "inputs": [{"description": "Path where data is stored.", "name": "Data",
+          "type": "LocalPath"}], "name": "Linear Regression", "outputs": [{"description":
+          "r2 metric", "name": "R2", "type": "Float"}, {"description": "directory
+          model.joblib", "name": "model", "type": "LocalPath"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "8df8fb1a3eb25dcf4efdb0de4c7fae0216e86356c277b4a24b66d8d4cd23be86", "url":
+          "linear_regression/linear_regression.yaml"}'}
+  - name: lstm
+    container:
+      args: []
+      command: [python, lstm.py, --data, /tmp/inputs/Data/data, --r2, /tmp/outputs/R2/data,
+        --model, /tmp/outputs/model/data]
+      image: drabasca/lstm_v1
+    inputs:
+      artifacts:
+      - {name: preprocessing-data-for-lstm-Data, path: /tmp/inputs/Data/data}
+    outputs:
+      parameters:
+      - name: lstm-R2
+        valueFrom: {path: /tmp/outputs/R2/data}
+      artifacts:
+      - {name: lstm-R2, path: /tmp/outputs/R2/data}
+      - {name: lstm-model, path: /tmp/outputs/model/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Trains
+          a LSTM", "implementation": {"container": {"command": ["python", "lstm.py",
+          "--data", {"inputPath": "Data"}, "--r2", {"outputPath": "R2"}, "--model",
+          {"outputPath": "model"}], "image": "drabasca/lstm_v1"}}, "inputs": [{"description":
+          "Path where data is stored.", "name": "Data", "type": "LocalPath"}], "name":
+          "LSTM", "outputs": [{"description": "r2 metric", "name": "R2", "type": "Float"},
+          {"description": "directory model", "name": "model", "type": "LocalPath"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "020017073d96cf8d6a247ceca6398f4ee2ccb0ffa3989fe21182235ef0761567",
+          "url": "lstm/lstm.yaml"}'}
+  - name: preprocessing-data
+    container:
+      args: []
+      command: [python, load_data.py, --db, /tmp/inputs/Download/data, --data, /tmp/outputs/Data/data]
+      image: drabasca/load_data_v2
+    inputs:
+      artifacts:
+      - {name: download-data-function-Download, path: /tmp/inputs/Download/data}
+    outputs:
+      artifacts:
+      - {name: preprocessing-data-Data, path: /tmp/outputs/Data/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Load
+          data from local dataset", "implementation": {"container": {"command": ["python",
+          "load_data.py", "--db", {"inputPath": "Download"}, "--data", {"outputPath":
+          "Data"}], "image": "drabasca/load_data_v2"}}, "inputs": [{"description":
+          "Path where database is stored.", "name": "Download", "type": "LocalPath"}],
+          "name": "Preprocessing Data", "outputs": [{"description": "Path where data
+          will be stored.", "name": "Data", "type": "LocalPath"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "2e01577be3a2d4acaf8de6eb7227aa763249714f6f4e1ddc561fc8320cfe8679", "url":
+          "load_data/load_data.yaml"}'}
+  - name: preprocessing-data-for-lstm
+    container:
+      args: []
+      command: [python, lstm_load_data.py, --db, /tmp/inputs/Download/data, --data,
+        /tmp/outputs/Data/data]
+      image: drabasca/lstm_load_data
+    inputs:
+      artifacts:
+      - {name: download-data-function-Download, path: /tmp/inputs/Download/data}
+    outputs:
+      artifacts:
+      - {name: preprocessing-data-for-lstm-Data, path: /tmp/outputs/Data/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Load
+          data from local dataset", "implementation": {"container": {"command": ["python",
+          "lstm_load_data.py", "--db", {"inputPath": "Download"}, "--data", {"outputPath":
+          "Data"}], "image": "drabasca/lstm_load_data"}}, "inputs": [{"description":
+          "Path where database is stored.", "name": "Download", "type": "LocalPath"}],
+          "name": "Preprocessing data for LSTM", "outputs": [{"description": "Path
+          where data will be stored.", "name": "Data", "type": "LocalPath"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "996cbbe12dbce3a7f4c1cb388526297f4042e969373b26f25d1dd300a8eb7e9e", "url":
+          "lstm_load_data/lstm_load_data.yaml"}'}
+  - name: random-forest-regressor
+    container:
+      args: []
+      command: [python, random_forest_regressor.py, --data, /tmp/inputs/Data/data,
+        --r2, /tmp/outputs/R2/data, --model, /tmp/outputs/model/data]
+      image: drabasca/random_forest_regressor_v1
+    inputs:
+      artifacts:
+      - {name: preprocessing-data-Data, path: /tmp/inputs/Data/data}
+    outputs:
+      parameters:
+      - name: random-forest-regressor-R2
+        valueFrom: {path: /tmp/outputs/R2/data}
+      artifacts:
+      - {name: random-forest-regressor-R2, path: /tmp/outputs/R2/data}
+      - {name: random-forest-regressor-model, path: /tmp/outputs/model/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Trains
+          a Random Forest Regressor", "implementation": {"container": {"command":
+          ["python", "random_forest_regressor.py", "--data", {"inputPath": "Data"},
+          "--r2", {"outputPath": "R2"}, "--model", {"outputPath": "model"}], "image":
+          "drabasca/random_forest_regressor_v1"}}, "inputs": [{"description": "Path
+          where data is stored.", "name": "Data", "type": "LocalPath"}], "name": "Random
+          Forest Regressor", "outputs": [{"description": "r2 metric", "name": "R2",
+          "type": "Float"}, {"description": "directory model.joblib", "name": "model",
+          "type": "LocalPath"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "15f40240329236675ce560b65cf7b55d91534732027da59d29c5cdbe4837af24", "url":
+          "random_forest_regressor/random_forest_regressor.yaml"}'}
+  - name: show-results
+    container:
+      args: [--random-forest, '{{inputs.parameters.random-forest-regressor-R2}}',
+        --linear-regression, '{{inputs.parameters.linear-regression-R2}}', --lstm,
+        '{{inputs.parameters.lstm-R2}}']
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def show_results(random_forest, linear_regression, lstm):
+            '''
+            brief: Given the outputs from decision_tree and logistic regression components
+                   the results are shown.
+            '''
+            print(f"Random Forest Regression (R-squared): {random_forest}")
+            print(f"Linear regression (R-squared): {linear_regression}")
+            print(f"LSTM (R-squared): {lstm}")
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Show results', description='brief: Given the outputs from decision_tree and logistic regression components')
+        _parser.add_argument("--random-forest", dest="random_forest", type=float, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--linear-regression", dest="linear_regression", type=float, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--lstm", dest="lstm", type=float, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = show_results(**_parsed_args)
+      image: python:3.7
+    inputs:
+      parameters:
+      - {name: linear-regression-R2}
+      - {name: lstm-R2}
+      - {name: random-forest-regressor-R2}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "brief:
+          Given the outputs from decision_tree and logistic regression components",
+          "implementation": {"container": {"args": ["--random-forest", {"inputValue":
+          "random_forest"}, "--linear-regression", {"inputValue": "linear_regression"},
+          "--lstm", {"inputValue": "lstm"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def show_results(random_forest, linear_regression, lstm):\n    ''''''\n    brief:
+          Given the outputs from decision_tree and logistic regression components\n           the
+          results are shown.\n    ''''''\n    print(f\"Random Forest Regression (R-squared):
+          {random_forest}\")\n    print(f\"Linear regression (R-squared): {linear_regression}\")\n    print(f\"LSTM
+          (R-squared): {lstm}\")\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Show
+          results'', description=''brief: Given the outputs from decision_tree and
+          logistic regression components'')\n_parser.add_argument(\"--random-forest\",
+          dest=\"random_forest\", type=float, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--linear-regression\",
+          dest=\"linear_regression\", type=float, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--lstm\",
+          dest=\"lstm\", type=float, required=True, default=argparse.SUPPRESS)\n_parsed_args
+          = vars(_parser.parse_args())\n\n_outputs = show_results(**_parsed_args)\n"],
+          "image": "python:3.7"}}, "inputs": [{"name": "random_forest", "type": "Float"},
+          {"name": "linear_regression", "type": "Float"}, {"name": "lstm", "type":
+          "Float"}], "name": "Show results"}', pipelines.kubeflow.org/component_ref: '{}',
+        pipelines.kubeflow.org/arguments.parameters: '{"linear_regression": "{{inputs.parameters.linear-regression-R2}}",
+          "lstm": "{{inputs.parameters.lstm-R2}}", "random_forest": "{{inputs.parameters.random-forest-regressor-R2}}"}'}
+  arguments:
+    parameters: []
+  serviceAccountName: pipeline-runner

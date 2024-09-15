@@ -1,0 +1,25 @@
+name: Linear Regression
+description: Trains a Linear Regression
+
+inputs:
+  - {name: Data, type: LocalPath, description: 'Path where data is stored.'}
+outputs:
+  - {name: R2, type: Float, description: 'r2 metric'}
+  - {name: model, type: LocalPath, description: 'directory model.joblib'}
+
+implementation:
+  container:
+    image: drabasca/linear_regression_v2
+    command: [
+      python, linear_regression.py,
+
+      --data,
+      {inputPath: Data},
+
+      --r2,
+      {outputPath: R2},
+
+      --model,
+      {outputPath: model}
+
+    ]
