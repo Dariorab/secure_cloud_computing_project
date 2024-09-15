@@ -1,4 +1,4 @@
-# **Machine Learning application into the cloud**
+# **Ethereum price prediction**
 
 ## **Introduction**
 The goal of this project is to design a secure and robust 
