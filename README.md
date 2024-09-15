@@ -1,4 +1,4 @@
-# **Machine Learning application into the cloud**
+# **Ethereum price prediction**
 
 ## **Introduction**
 The goal of this project is to design a secure and robust 
@@ -31,7 +31,7 @@ you need to install kubeflow and kubernets.
 * Execute the training process in kublefow
 * execute `streamlit run app.py`
 
-utils commands:
+utility commands:
 ```bash
 kubectl delete services eth-prediction
 kubectl delete deployment eth-prediction
