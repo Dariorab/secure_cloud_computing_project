@@ -4,7 +4,7 @@
 
 The project aims to develop, train, and deploy a scalable machine learning model for predicting ETH market close values, leveraging Kubeflow's extensive capabilities. The model will be supported by a robust pipeline that enables rapid updates and iterations. Thanks to deployment as a containerized application on a Kubernetes cluster, it will ensure fault tolerance, high availability, and optimal resource management.
 
-For more details: *ml_into_the_cloud.pdf*.
+For more details: *[ml_into_the_cloud.pdf](https://github.com/Dariorab/secure_cloud_computing_project/blob/main/ml_into_the_cloud.pdf)*.
 
 ## **Tools**
 - **Kubeflow**
