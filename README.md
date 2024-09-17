@@ -1,10 +1,8 @@
 # **Ethereum price prediction**
 
 ## **Introduction**
-The goal of this project is to design a secure and robust 
-cloud architecture capable of hosting a machine learning web application.
-Ensuring the application remains online is critical, with a primary
-focus on the architecture's stability and resilience. 
+
+The project aims to develop, train, and deploy a scalable machine learning model for predicting ETH market close values, leveraging Kubeflow's extensive capabilities. The model will be supported by a robust pipeline that enables rapid updates and iterations. Thanks to deployment as a containerized application on a Kubernetes cluster, it will ensure fault tolerance, high availability, and optimal resource management.
 
 For more details: *ml_into_the_cloud.pdf*.
 
