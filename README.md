@@ -15,7 +15,7 @@ For more details: *[ml_into_the_cloud.pdf](https://github.com/Dariorab/secure_cl
 ## **Authors and Acknowledgment**
 
 **Ethereum price prediction** contributors:
-- **[Dario Rabasca](https://github.com/Dariorab)**
+- **[Dario Rabasca](https://github.com/Dariorab/index_repositories)**
 - **[Emanuele Mancusi](https://github.com/Emancusi6)**
 
 Thank you to all the contributors for their hard work and dedication to the project.
